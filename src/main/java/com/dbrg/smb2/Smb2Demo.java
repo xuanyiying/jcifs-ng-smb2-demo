@@ -116,11 +116,11 @@ public class Smb2Demo {
     class ShareProperties {
 
         public static final String DOMAIN = "";
-        public static final String USERNAME = "administrator";
-        public static final String PASSWORD = "pass@word1";
-        public static final String SHARE_ROOT = "SHAREFOLDER";
+        public static final String USERNAME = "admin";
+        public static final String PASSWORD = "admin";
+        public static final String SHARE_ROOT = "SHARE_ROOT";
         public static final String FILE_PATH = "mysql-installer-community-5.7.20.msi";
-        public static final String SERVER_NAME = "WIN-NM5I0S6N5MJ";
+        public static final String SERVER_NAME = "SERVER_NAME";
     }
 
 }
