@@ -18,17 +18,17 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class SmbFiles {
     private static final String SMB_PROTOCOL = "smb://";
-    private String username;
-    private String password;
+    private static String username;
+    private static String password;
 
     private SmbFiles(String username, String password) {
-        this.username = username;
-        this.password = password;
+        SmbFiles.username = username;
+        SmbFiles.password = password;
     }
 
     public static SmbFiles getInstance(String username, String password) {
-        Holder.username = username;
-        Holder.password = password;
+        SmbFiles.username = username;
+        SmbFiles.password = password;
         return Holder.INSTANCE;
     }
 
@@ -64,24 +64,14 @@ public class SmbFiles {
      * @param source
      * @param target
      */
-    public void moveSmbFileToSmb(SmbResource source, String target) throws CIFSException,
-            MalformedURLException {
-        boolean renamed = false;
+    public void moveSmbFileToSmb(SmbFile source, String target) throws IOException {
         try (SmbFile targetFile = newSmbFile(target)) {
             if (targetFile.exists()) {
                 targetFile.delete();
             }
             targetFile.createNewFile();
-            try {
-                source.copyTo(targetFile);
-                if (targetFile.exists()) {
-                    renamed = true;
-                }
-            } finally {
-                if (renamed && source.exists()) {
-                    source.delete();
-                }
-            }
+            writeSmbFile(source.getInputStream(),target);
+            source.delete();
         }
     }
 
@@ -128,7 +118,12 @@ public class SmbFiles {
         if (null != in && StringUtil.isNotEmpty(target)) {
             try (SmbFile file = newSmbFile(target)) {
                 if (!file.exists()) {
-                    file.createNewFile();
+                    try (SmbFile parent = newSmbFile(file.getParent())) {
+                        if (!parent.exists()) {
+                            parent.mkdirs();
+                        }
+                        file.createNewFile();
+                    }
                 }
                 write(in, file);
             }
@@ -204,9 +199,7 @@ public class SmbFiles {
         return SingletonContext.getInstance().withCredentials(new NtlmPasswordAuthenticator(username, password));
     }
 
-    static class Holder {
-        private static String username;
-        private static String password;
+    private static class Holder {
         private static SmbFiles INSTANCE = new SmbFiles(username, password);
     }
 
