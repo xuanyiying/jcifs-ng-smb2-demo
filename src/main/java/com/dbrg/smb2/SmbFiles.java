@@ -3,11 +3,14 @@ package com.dbrg.smb2;
 
 import java.io.*;
 import java.net.MalformedURLException;
+
+
 import jcifs.CIFSContext;
 import jcifs.CIFSException;
 import jcifs.SmbResource;
 import jcifs.context.SingletonContext;
 import jcifs.smb.NtlmPasswordAuthenticator;
+import jcifs.smb.SmbException;
 import jcifs.smb.SmbFile;
 import lombok.extern.slf4j.Slf4j;
 
@@ -33,8 +36,12 @@ public class SmbFiles {
     }
 
     private String smb(String path) {
-        if (StringUtil.isNotEmpty(path) && !path.startsWith(SMB_PROTOCOL)) {
-            path = StringUtil.transBlank(SMB_PROTOCOL + path);
+        if (StringUtil.isNotEmpty(path)){
+        	path.replace("\\", "/");
+        	path = path.replaceFirst("//", "");
+        	if(!path.startsWith(SMB_PROTOCOL)) {
+                path = StringUtil.transBlank(SMB_PROTOCOL + path);
+            }
         }
         return path;
     }
@@ -52,6 +59,16 @@ public class SmbFiles {
         }
     }
 
+    public boolean exists(String path) throws IOException {
+        if (StringUtil.isEmpty(path)){
+            return false;
+        }
+        try {
+            SmbResource resource = build(username,password).get(smb(path));
+            return null != resource && resource.exists();
+        } catch (Exception e){}
+        return false;
+    }
     /**
      * @param file
      * @return
@@ -59,7 +76,16 @@ public class SmbFiles {
     public String getSmbFileName(SmbFile file) {
         return file.getName();
     }
-
+    
+    
+    public boolean isExists(SmbFile smbFile) {
+    	try {
+    		return null != smbFile && smbFile.exists();
+        } catch(SmbException e){
+        	log.error("File not exists." + smbFile != null ? smbFile.getPath() : "");
+        }
+		return false;
+    }
     /**
      * @param source
      * @param target
@@ -171,6 +197,9 @@ public class SmbFiles {
 
     public SmbFile newSmbFile(String path) throws MalformedURLException {
         return new SmbFile(smb(path), build(username, password));
+    }
+    public SmbFile[] listFiles(String path) throws MalformedURLException, SmbException {
+        return newSmbFile(path).listFiles();
     }
 
     public void renameTo(SmbResource sourceFile, SmbResource targetFile) throws CIFSException {
