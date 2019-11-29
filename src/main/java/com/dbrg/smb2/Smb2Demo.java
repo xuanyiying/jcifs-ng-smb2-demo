@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Objects;
+
 import jcifs.CIFSContext;
 import jcifs.CIFSException;
 import jcifs.context.SingletonContext;
@@ -27,12 +28,13 @@ public class Smb2Demo {
     private static final String TARGET_DIR = "testDir";
 
     public static void main(String[] args) throws IOException {
+
         CIFSContext context = withNTLMCredentials(SingletonContext.getInstance());
-        testRead(context);
-        testWrite(context);
+        read(context);
+        write(context);
     }
 
-    private static void testWrite(CIFSContext context) throws IOException {
+    private static void write(CIFSContext context) throws IOException {
         long start = System.currentTimeMillis();
         String dir = getShareRootURL() + TARGET_DIR;
         String targetPath = dir + File.separator + "Spring.pdf";
@@ -40,10 +42,10 @@ public class Smb2Demo {
         boolean result = SmbFileWriter.writeSmbFile(SOURCE_PATH, targetPath, context);
         log.info("Write File success:{}", result);
         long end = System.currentTimeMillis();
-        log.info("Write File success,use time:{} {}" ,(end - start),"ms");
+        log.info("Write File success,use time:{} {}", (end - start), "ms");
     }
 
-    private static void testRead(CIFSContext context) throws IOException {
+    private static void read(CIFSContext context) throws IOException {
         long start = System.currentTimeMillis();
         SmbFileReader reader = new SmbFileReader();
         InputStream in = reader.readSmbFile(getShareRootURL() + ShareProperties.FILE_PATH, context);
@@ -53,27 +55,28 @@ public class Smb2Demo {
     }
 
 
-    public static CIFSContext withNTLMCredentials(CIFSContext ctx) {
+    private static CIFSContext withNTLMCredentials(CIFSContext ctx) {
         return ctx.withCredentials(new NtlmPasswordAuthenticator(ShareProperties.DOMAIN,
                 ShareProperties.USERNAME, ShareProperties.PASSWORD));
     }
 
-    public static String getShareRootURL() {
+    private static String getShareRootURL() {
         return "smb://" + ShareProperties.SERVER_NAME + "/" + ShareProperties.SHARE_ROOT + "/";
     }
 
     static class SmbFileReader {
         public InputStream readSmbFile(String path, CIFSContext context) throws IOException {
-            SmbFile file = new SmbFile(path, context);
-            if (Objects.isNull(file) || !file.exists()) {
-                throw new FileNotFoundException(path);
+            try (SmbFile file = new SmbFile(path, context)) {
+                if (Objects.isNull(file) || !file.exists()) {
+                    throw new FileNotFoundException(path);
+                }
+                return file.getInputStream();
             }
-            return file.getInputStream();
         }
     }
 
     static class SmbFileWriter {
-        public static boolean writeSmbFile(String source, String target, CIFSContext context) throws IOException {
+        static boolean writeSmbFile(String source, String target, CIFSContext context) throws IOException {
             if (StringUtil.isEmpty(source) || StringUtil.isEmpty(target)) {
                 return false;
             }
@@ -81,7 +84,7 @@ public class Smb2Demo {
                     target, context);
         }
 
-        public static boolean writeSmbFile(InputStream in, String target, CIFSContext context) throws IOException {
+        static boolean writeSmbFile(InputStream in, String target, CIFSContext context) throws IOException {
             if (Objects.nonNull(in) && StringUtil.isNotEmpty(target)) {
                 try (SmbFile file = new SmbFile(target, context)) {
                     try (SmbFile parent = new SmbFile(file.getParent(), context)) {
@@ -104,7 +107,7 @@ public class Smb2Demo {
             return false;
         }
 
-        public static SmbFile createDirectory(String targetDir, CIFSContext context) throws MalformedURLException,
+        static SmbFile createDirectory(String targetDir, CIFSContext context) throws MalformedURLException,
                 CIFSException {
             try (SmbFile dir = new SmbFile(targetDir, context)) {
                 dir.mkdir();
