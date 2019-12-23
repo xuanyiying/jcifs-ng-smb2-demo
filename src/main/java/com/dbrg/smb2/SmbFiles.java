@@ -35,12 +35,14 @@ public class SmbFiles {
         return Holder.INSTANCE;
     }
 
-    private String smb(String path) {
+   private String smb(String path) {
         if (StringUtil.isNotEmpty(path)){
         	path.replace("\\", "/");
-        	path = path.replaceFirst("//", "");
         	if(!path.startsWith(SMB_PROTOCOL)) {
-                path = StringUtil.transBlank(SMB_PROTOCOL + path);
+            	    path = path.replaceFirst("//", "");
+        	}
+        	if(!path.startsWith(SMB_PROTOCOL)) {
+                    path = StringUtil.transBlank(SMB_PROTOCOL + path);
             }
         }
         return path;
@@ -90,17 +92,22 @@ public class SmbFiles {
      * @param source
      * @param target
      */
-    public void moveSmbFileToSmb(SmbFile source, String target) throws IOException {
-        try (SmbFile targetFile = newSmbFile(target)) {
-            if (targetFile.exists()) {
-                targetFile.delete();
+    
+     public void moveSmbFileToSmb(SmbFile source, SmbFile targetDir) throws IOException {	 
+        String targetPath = targetDir.getCanonicalPath();
+     	if(!source.isDirectory()) {
+     		if(!targetPath.endsWith("/")) {
+     			targetPath += "/";
+     		}
+     		targetPath += source.getName();
+     	}
+        try(SmbFile targetFile = new SmbFile(targetPath,targetDir.getContext())){
+            if(targetFile.exists()) {
+            	targetFile.delete();
             }
-            targetFile.createNewFile();
-            writeSmbFile(source.getInputStream(),target);
-            source.delete();
+            source.renameTo(targetFile);
         }
-    }
-
+    }  
     /**
      * @param filePath
      * @return
